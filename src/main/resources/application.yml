@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: friend-map
+  profiles:
+    active: dev

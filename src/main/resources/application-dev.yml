@@ -1,0 +1,17 @@
+server:
+  port: 8080
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/projectmap?createDatabaseIfNotExist=true&useUnicode=yes&characterEncoding=UTF-8&useSSL=false
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    generate-ddl: false
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
