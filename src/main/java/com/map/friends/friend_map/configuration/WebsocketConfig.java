@@ -11,16 +11,23 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final UserHandshakeHandler userHandshakeHandler;
+
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.setApplicationDestinationPrefixes("/app");
-        registry.enableSimpleBroker("/user");
-        registry.setUserDestinationPrefix("/user");
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+// Khi bạn sử dụng enableSimpleBroker("/topic"), nó cho phép server gửi tin nhắn đến tất cả các client đã đăng ký vào destination bắt đầu bằng /topic
+// Nếu một client đăng ký vào /topic/news, bất kỳ tin nhắn nào được gửi đến destination đó sẽ được tự động gửi đến tất cả các client đã đăng ký
+        config.enableSimpleBroker("/topic","/user");
+//Khi client gửi tin nhắn đến server, nó sẽ sử dụng các destination bắt đầu với những tiền tố này
+        config.setApplicationDestinationPrefixes("/app", "/user");
+        //Đặt tiền tố cho các destination mà các tin nhắn sẽ được gửi đến người dùng cụ thể.
+        //Khi bạn sử dụng convertAndSendToUser(userId, "/location", message), nó sẽ gửi tin nhắn đến một user cụ thể.
+        //Server sẽ tạo ra destination cho người dùng có ID là userId, và địa chỉ đó sẽ là /user/userId/location
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+        registry.addEndpoint("/").setAllowedOriginPatterns("*");
     }
-
 }
