@@ -13,11 +13,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @Table(name = "friend_ship")// lời mời kết bạn, 1 người dùng có thể gửi nhiều lời mời kết bạn, nhận nhiều lời mời kết bạn
 public class FriendShip extends BaseEntity<Long>{
+    @Enumerated(EnumType.STRING)
     private FriendShipStatus status; // trạng thái lời mời kết bạn
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id")
-    private User sender; // người gửi lời mời
+    @JoinColumn(name = "author_id")
+    private User author; // người gửi lời mời
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "receiver_id")
-    private User receiver; // người nhận lời mời
+    @JoinColumn(name = "target_id")
+    private User target; // người nhận lời mời
 }

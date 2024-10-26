@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.security.core.GrantedAuthority;
 
 @Getter
 @Setter
@@ -13,6 +14,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "role")
-public class Role extends BaseEntity<Integer>{
+public class Role extends BaseEntity<Integer> implements GrantedAuthority {
     private String name;
+
+    @Override
+    public String getAuthority() {
+        return name;
+    }
 }
