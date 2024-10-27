@@ -14,7 +14,6 @@ import lombok.Setter;
 @Table(name = "friend_ship")// lời mời kết bạn, 1 người dùng có thể gửi nhiều lời mời kết bạn, nhận nhiều lời mời kết bạn
 public class FriendShip extends BaseEntity<Long>{
     @Enumerated(EnumType.STRING)
-    private FriendShipStatus status; // trạng thái lời mời kết bạn
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")
     private User author; // người gửi lời mời

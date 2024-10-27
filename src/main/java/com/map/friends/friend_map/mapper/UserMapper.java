@@ -27,8 +27,8 @@ public interface UserMapper   {
     @Mapping(target = "id", ignore = true)
     void updateEntityFromDto(UserDto dto, @MappingTarget User entity);
 
-    @Mapping(target = "friendShipStatus", ignore = true)
     @Mapping(target = "friend", ignore = true)
+    @Mapping(target = "relationshipRole", ignore = true)
     UserSearchResponse toSearchResponse(User entity, Long currentUserId);
 
 //    default FriendShipStatus getFriendShipStatus(User user, Long currentUserId) {

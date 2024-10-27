@@ -39,10 +39,10 @@ public class User extends BaseEntity<Long> implements UserDetails {
     private Set<UserHasFriend> friendsAsUserB = new HashSet<>(); // Quan hệ khi người dùng đóng vai trò là userB
 
     @OneToMany(mappedBy = "target")
-    private Set<FriendShip> receivedFriendShips = new HashSet<>();
+    private Set<FriendShip> receivedFriendShips = new HashSet<>(); // Quan hệ khi người dùng nhận lời mời kết bạn
 
     @OneToMany(mappedBy = "author")
-    private Set<FriendShip> sentFriendShips  = new HashSet<>();
+    private Set<FriendShip> sentFriendShips  = new HashSet<>(); // Quan hệ khi người dùng gửi lời mời kết bạn
 
 
 

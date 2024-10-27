@@ -17,10 +17,10 @@ import lombok.Setter;
 @Entity
 public class UserHasFriend extends BaseEntity<Long>{
     @ManyToOne
-    @JoinColumn(name = "user_a_id")
+    @JoinColumn(name = "user_a_id", nullable = false)
     private User userA;
 
     @ManyToOne
-    @JoinColumn(name = "user_b_id")
+    @JoinColumn(name = "user_b_id", nullable = false)
     private User userB;
 }

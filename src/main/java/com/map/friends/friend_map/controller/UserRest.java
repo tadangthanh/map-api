@@ -41,9 +41,13 @@ public class UserRest {
     public ResponseData<?> acceptFriendRequest(@RequestBody FriendRequest friendRequest) {
         return new ResponseData<>(HttpStatus.OK.value(), "Friend request accepted successfully", this.userService.acceptAddFriend(friendRequest));
     }
-    @GetMapping("/friend/pending/accept")
-    public ResponseData<?> getPendingFriendRequests(@RequestParam(defaultValue = "0") int pageNo, @RequestParam(defaultValue = "10") int pageSize) {
-        return new ResponseData<>(HttpStatus.OK.value(), "Friend requests found successfully", this.userService.getFriendPendingAccept(pageNo, pageSize));
+    @GetMapping("/friends/pending/accept")
+    public ResponseData<?> getPendingFriendRequests(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return new ResponseData<>(HttpStatus.OK.value(), "Friend requests found successfully", this.userService.getPendingFriendRequests(page, size));
+    }
+    @GetMapping("/friends")
+    public ResponseData<?> getFriends(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return new ResponseData<>(HttpStatus.OK.value(), "Friends found successfully", this.userService.getFriends(page, size));
     }
 
 }

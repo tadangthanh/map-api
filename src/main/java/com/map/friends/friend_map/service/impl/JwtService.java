@@ -6,6 +6,7 @@ import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.map.friends.friend_map.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -91,6 +92,7 @@ public class JwtService {
         int verifyCode = 100000 + random.nextInt(900000);
         return String.valueOf(verifyCode);
     }
+
 
 
 }

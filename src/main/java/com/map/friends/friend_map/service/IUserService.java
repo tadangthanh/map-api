@@ -2,6 +2,7 @@ package com.map.friends.friend_map.service;
 
 import com.map.friends.friend_map.dto.UserDto;
 import com.map.friends.friend_map.dto.request.FriendRequest;
+import com.map.friends.friend_map.dto.request.UserMove;
 import com.map.friends.friend_map.dto.request.UserRequestDto;
 import com.map.friends.friend_map.dto.response.PageResponse;
 import com.map.friends.friend_map.dto.response.UserResponse;
@@ -25,6 +26,6 @@ public interface IUserService extends UserDetailsService {
 
     PageResponse<?> getFriends(int pageNo, int pageSize);
 
-    PageResponse<?> getFriendPendingAccept(int pageNo, int pageSize);
-
+    PageResponse<?> getPendingFriendRequests(int pageNo, int pageSize);
+    void onMove(UserMove userDto);
 }

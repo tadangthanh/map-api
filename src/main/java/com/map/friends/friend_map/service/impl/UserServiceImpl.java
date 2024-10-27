@@ -2,11 +2,15 @@ package com.map.friends.friend_map.service.impl;
 
 import com.map.friends.friend_map.dto.UserDto;
 import com.map.friends.friend_map.dto.request.FriendRequest;
+import com.map.friends.friend_map.dto.request.UserMove;
 import com.map.friends.friend_map.dto.request.UserRequestDto;
 import com.map.friends.friend_map.dto.response.PageResponse;
 import com.map.friends.friend_map.dto.response.UserResponse;
 import com.map.friends.friend_map.dto.response.UserSearchResponse;
-import com.map.friends.friend_map.entity.*;
+import com.map.friends.friend_map.entity.FriendShip;
+import com.map.friends.friend_map.entity.Role;
+import com.map.friends.friend_map.entity.User;
+import com.map.friends.friend_map.entity.UserHasFriend;
 import com.map.friends.friend_map.exception.ResourceNotFoundException;
 import com.map.friends.friend_map.repository.FriendShipRepository;
 import com.map.friends.friend_map.repository.RoleRepository;
@@ -20,18 +24,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
-import static com.map.friends.friend_map.entity.FriendShipStatus.PENDING;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +42,7 @@ public class UserServiceImpl implements IUserService {
     private final RoleRepository roleRepository;
     private final UserHasFriendRepository userHasFriendRepository;
     private final FriendShipRepository friendShipRepository;
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
     @Override
     public UserResponse save(UserRequestDto userDto) {
@@ -79,7 +80,7 @@ public class UserServiceImpl implements IUserService {
             email = email.concat("@gmail.com");
         }
         User currentUser = getCurrentUser();
-        if(currentUser.getEmail().equals(email)){
+        if (currentUser.getEmail().equals(email)) {
             throw new ResourceNotFoundException("User not found");
         }
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -92,12 +93,12 @@ public class UserServiceImpl implements IUserService {
         User user = getCurrentUser();
         User friend = userRepository.findByEmail(friendRequest.getEmail().trim()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         // kiem tra xem da la ban chua
-        boolean isFriend = userHasFriendRepository.isFriendRelationshipBetweenUserAAndUserB(user.getId(), friend.getId());
+        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(user.getId(), friend.getId());
         if (isFriend) {
             return userMapping.toSearchResponse(friend, user.getId());
         }
         // kiem tra xem da gui loi moi cho nguoi nay hay chua, neu roi thi khong gui nua
-        FriendShip friendShip = friendShipRepository.findFriendShipByAuthorAndStatusPending(user.getId()).orElse(null);
+        FriendShip friendShip = friendShipRepository.findFriendShipBetweenUsers(user.getId(), friend.getId()).orElse(null);
         if (friendShip != null) {
             return userMapping.toSearchResponse(friend, user.getId());
         }
@@ -107,36 +108,28 @@ public class UserServiceImpl implements IUserService {
         friendShip.setAuthor(user);
         friendShip.setTarget(friend);
         // author la nguoi gui va se co trang thai la pending
-        friendShip.setStatus(PENDING);
         friendShipRepository.saveAndFlush(friendShip);
-        FriendShip friendShipForReceiver = new FriendShip();
-        friendShipForReceiver.setTarget(user);
-        friendShipForReceiver.setAuthor(friend);
-        //target la nguoi nhan, se co trang thai la pending_you_accept
-        friendShipForReceiver.setStatus(FriendShipStatus.PENDING_YOU_ACCEPT);
-        friendShipRepository.saveAndFlush(friendShipForReceiver);
         return userMapping.toSearchResponse(friend, user.getId());
-
         // them logic gui thong bao cho nguoi dung
 
     }
 
-    //huy gui loi moi ket ban
+    //thu hoi yeu cau ket ban
     @Override
     public UserSearchResponse cancelAddFriend(FriendRequest friendRequest) {
         User user = getCurrentUser();
         User friend = userRepository.findByEmail(friendRequest.getEmail().trim()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        boolean isFriend = userHasFriendRepository.isFriendRelationshipBetweenUserAAndUserB(user.getId(), friend.getId());
+        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(user.getId(), friend.getId());
         // neu la ban thi k lam gi ca
         if (isFriend) {
             return userMapping.toSearchResponse(friend, user.getId());
         }
-        // kiem tra xem co loi moi ket ban tu nguoi nay hay chua
-        FriendShip friendShip = friendShipRepository.findFriendShipByAuthorAndStatusPending(user.getId()).orElse(null);
+        // kiem tra xem co gui loi moi nao toi user nay chua
+        FriendShip friendShip = friendShipRepository.findByAuthorAndTarget(user.getId(), friend.getId()).orElse(null);
         // neu nguoi dung da gui loi moi ket ban thi huy
         if (friendShip != null) {
             // xoa loi moi ket ban
-            friendShipRepository.deleteFriendShipByAuthorOrTargetId(user.getId());
+            friendShipRepository.delete(friendShip);
             return userMapping.toSearchResponse(friend, user.getId());
         }
         return userMapping.toSearchResponse(friend, user.getId());
@@ -146,17 +139,17 @@ public class UserServiceImpl implements IUserService {
     public UserSearchResponse acceptAddFriend(FriendRequest friendRequest) {
         User currentUser = getCurrentUser();
         User friend = userRepository.findByEmail(friendRequest.getEmail().trim()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        boolean isFriend = userHasFriendRepository.isFriendRelationshipBetweenUserAAndUserB(currentUser.getId(), friend.getId());
+        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(currentUser.getId(), friend.getId());
         // neu la ban thi k lam gi ca
         if (isFriend) {
             return userMapping.toSearchResponse(friend, currentUser.getId());
         }
         // kiem tra xem co loi moi ket ban tu nguoi nay hay chua
-        FriendShip friendShip = friendShipRepository.findByAuthorAndTargetAndStatusPending(friend.getId(), currentUser.getId()).orElseThrow(() -> new ResourceNotFoundException("Friend request not found"));
-        if(friendShip == null){
+        FriendShip friendShip = friendShipRepository.findByAuthorAndTarget(friend.getId(), currentUser.getId()).orElseThrow(() -> new ResourceNotFoundException("Friend request not found"));
+        if (friendShip == null) {
             return userMapping.toSearchResponse(friend, currentUser.getId());
         }
-        friendShipRepository.deleteFriendShipByAuthorOrTargetId(currentUser.getId());
+        friendShipRepository.delete(friendShip);
         // them ban
         UserHasFriend userHasFriend = new UserHasFriend();
         userHasFriend.setUserA(currentUser);
@@ -169,42 +162,75 @@ public class UserServiceImpl implements IUserService {
     public UserSearchResponse rejectAddFriend(FriendRequest friendRequest) {
         User currentUser = getCurrentUser();
         User friend = userRepository.findByEmail(friendRequest.getEmail().trim()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        boolean isFriend = userHasFriendRepository.isFriendRelationshipBetweenUserAAndUserB(currentUser.getId(), friend.getId());
+        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(currentUser.getId(), friend.getId());
         // neu la ban thi k lam gi ca
         if (isFriend) {
             return userMapping.toSearchResponse(friend, currentUser.getId());
         }
-        // kiem tra xem co loi moi ket ban tu nguoi nay hay chua
-        FriendShip friendShip = friendShipRepository.findByAuthorAndTargetAndStatusPendingYouAccept(currentUser.getId(),friend.getId()).orElseThrow(() -> new ResourceNotFoundException("Friend request not found"));
-        if(friendShip == null){
+        // kiem tra xem co nhan loi moi ket ban tu nguoi nay hay chua
+        FriendShip friendShip = friendShipRepository.findByAuthorAndTarget(friend.getId(), currentUser.getId()).orElseThrow(() -> new ResourceNotFoundException("Friend request not found"));
+        if (friendShip == null) {
             return userMapping.toSearchResponse(friend, currentUser.getId());
         }
-        friendShipRepository.deleteFriendShipByAuthorOrTargetId(currentUser.getId());
+        friendShipRepository.delete(friendShip);
         return userMapping.toSearchResponse(friend, currentUser.getId());
     }
 
     @Override
     public PageResponse<?> getFriends(int page, int size) {
-        int p = 0;
-        if (page > 0) {
-            p = page - 1;
-        }
         User user = getCurrentUser();
-        return null;
-    }
-
-    @Override
-    public PageResponse<?> getFriendPendingAccept(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        User user = getCurrentUser();
-        Page<FriendShip> friendShips = friendShipRepository.findByAuthorAndStatus(user.getId(), FriendShipStatus.PENDING_YOU_ACCEPT,pageable);
-        List<User> users = friendShips.stream().map(FriendShip::getTarget).toList();
+        Page<UserHasFriend> userHasFriends = userHasFriendRepository.getFriends(user.getId(), pageable);
+        List<User> users = new ArrayList<>();
+        // lay danh sach ban be cua user
+        //neu userA la user hien tai thi userB la ban be va nguoc lai
+        for (UserHasFriend userHasFriend : userHasFriends) {
+            if (Objects.equals(userHasFriend.getUserA().getId(), user.getId())) {
+                users.add(userHasFriend.getUserB());
+            } else {
+                users.add(userHasFriend.getUserA());
+            }
+        }
         List<UserSearchResponse> userSearchResponses = new ArrayList<>();
         for (User u : users) {
             userSearchResponses.add(userMapping.toSearchResponse(u, user.getId()));
         }
-        return PageResponse.builder().pageNo(pageable.getPageNumber()).pageSize(pageable.getPageSize()).totalItems(friendShips.getTotalPages()).items(userSearchResponses).build();
+        userSearchResponses.sort(Comparator.comparing(UserSearchResponse::getName));
+        return PageResponse.builder()
+                .pageNo(pageable.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalPage(userHasFriends.getTotalPages())
+                .totalItems(userHasFriends.getTotalElements())
+                .hasNext(userHasFriends.hasNext())
+                .items(userSearchResponses).build();
+    }
 
+    @Override
+    public PageResponse<?> getPendingFriendRequests(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        User user = getCurrentUser();
+        // lấy danh sách lời mời kết bạn chờ xác nhận của user hiện tại đang đăng nhập
+        // tức là user hiện tại là target
+        Page<FriendShip> friendShips = friendShipRepository.findByTarget(user.getId(), pageable);
+        List<User> users = friendShips.stream().map(FriendShip::getAuthor).toList();
+        List<UserSearchResponse> userSearchResponses = new ArrayList<>();
+        for (User u : users) {
+            userSearchResponses.add(userMapping.toSearchResponse(u, user.getId()));
+        }
+        return PageResponse.builder()
+                .pageNo(pageable.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalPage(friendShips.getTotalPages())
+                .totalItems(friendShips.getTotalElements())
+                .hasNext(friendShips.hasNext())
+                .items(userSearchResponses).build();
+
+    }
+
+    @Override
+    public void onMove(UserMove userDto) {
+        System.out.println("receiverPrivateMessage: " + userDto.getEmail());
+        simpMessagingTemplate.convertAndSendToUser(userDto.getEmail(), "/private/friend-location", userDto);
     }
 
     @Override

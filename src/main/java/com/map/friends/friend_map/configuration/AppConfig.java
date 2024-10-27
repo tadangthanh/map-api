@@ -1,11 +1,13 @@
 package com.map.friends.friend_map.configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.map.friends.friend_map.security.JwtAuthenticationFilter;
 import com.map.friends.friend_map.service.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -28,6 +30,7 @@ public class AppConfig implements WebMvcConfigurer {
     private final JwtAuthenticationFilter preFilter;
     private final String[] WHITE_LIST = {
             "/api/v1/auth/**",
+            "/ws/**",
 //            "/api/v1/users/**",
     };
 
@@ -38,7 +41,6 @@ public class AppConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Các phương thức được phép
                 .allowedHeaders("*");// Cho phép tất cả các header
     }
-
     //quan ly cac roles, user truy cap he thong
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
@@ -55,6 +57,7 @@ public class AppConfig implements WebMvcConfigurer {
                                 .anyRequest().authenticated()
                 ).sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(provider()).addFilterBefore(preFilter, UsernamePasswordAuthenticationFilter.class);
+        http.httpBasic(AbstractHttpConfigurer::disable);
         return http.build();
     }
 

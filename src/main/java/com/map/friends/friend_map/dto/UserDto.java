@@ -1,5 +1,7 @@
 package com.map.friends.friend_map.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.map.friends.friend_map.validator.Create;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,7 +14,8 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDto extends BaseDto<Long>{
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class UserDto extends BaseDto<Long> {
     @NotBlank(message = "facebookId is required", groups = {Create.class})
     private String googleId;
     @NotBlank(message = "name is required", groups = {Create.class})
