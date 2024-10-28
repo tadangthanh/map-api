@@ -14,4 +14,17 @@ spring:
       ddl-auto: update
     generate-ddl: false
     database-platform: org.hibernate.dialect.MySQL8Dialect
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 3000
+
+
+  cache:
+    type: redis
+    redis:
+      cache-null-values: true
+      time-to-live: 3600000
+
 

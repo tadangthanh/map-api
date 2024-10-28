@@ -26,22 +26,26 @@ public class User extends BaseEntity<Long> implements UserDetails {
     private boolean isLocationSharing;
     private Integer batteryLevel;
     private String avatarUrl;
+    private Double latitude;
+    private Double longitude;
+    private double speed;
+    private double distance;
     @OneToMany(mappedBy = "user")
     private Set<UserHasGroup> groups = new HashSet<>();
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @OneToMany(mappedBy = "userA")
+    @OneToMany(mappedBy = "userA",fetch = FetchType.LAZY)
     private Set<UserHasFriend> friendsAsUserA = new HashSet<>(); // Quan hệ khi người dùng đóng vai trò là userA
 
-    @OneToMany(mappedBy = "userB")
+    @OneToMany(mappedBy = "userB",fetch = FetchType.LAZY)
     private Set<UserHasFriend> friendsAsUserB = new HashSet<>(); // Quan hệ khi người dùng đóng vai trò là userB
 
-    @OneToMany(mappedBy = "target")
+    @OneToMany(mappedBy = "target",cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     private Set<FriendShip> receivedFriendShips = new HashSet<>(); // Quan hệ khi người dùng nhận lời mời kết bạn
 
-    @OneToMany(mappedBy = "author")
+    @OneToMany(mappedBy = "author",cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     private Set<FriendShip> sentFriendShips  = new HashSet<>(); // Quan hệ khi người dùng gửi lời mời kết bạn
 
 

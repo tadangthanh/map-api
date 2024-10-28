@@ -11,6 +11,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserMove implements Serializable {
+    private Long id;
     private String googleId;
     private String name;
     private String email;
@@ -19,4 +20,6 @@ public class UserMove implements Serializable {
     private Double latitude;
     private Double longitude;
     private String avatarUrl;
+    private double speed;
+    private double distance;
 }

@@ -30,6 +30,8 @@ public class UserDto extends BaseDto<Long> {
     private Double latitude;
     @NotNull(message = "longitude is required", groups = {Create.class})
     private Double longitude;
+    private Double speed;
+    private Double distance;
     private String avatarUrl;
 
 }

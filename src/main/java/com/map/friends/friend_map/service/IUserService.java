@@ -9,6 +9,8 @@ import com.map.friends.friend_map.dto.response.UserResponse;
 import com.map.friends.friend_map.dto.response.UserSearchResponse;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import java.util.List;
+
 public interface IUserService extends UserDetailsService {
     UserResponse save(UserRequestDto userDto);
 
@@ -28,4 +30,6 @@ public interface IUserService extends UserDetailsService {
 
     PageResponse<?> getPendingFriendRequests(int pageNo, int pageSize);
     void onMove(UserMove userDto);
+
+    List<UserDto> getAllFriends();
 }

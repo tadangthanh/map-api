@@ -29,6 +29,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.util.*;
 
@@ -40,9 +42,11 @@ public class UserServiceImpl implements IUserService {
     private final IUserMapping userMapping;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final JedisPool jedisPool;
     private final UserHasFriendRepository userHasFriendRepository;
     private final FriendShipRepository friendShipRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final FriendService friendService;
 
     @Override
     public UserResponse save(UserRequestDto userDto) {
@@ -230,7 +234,38 @@ public class UserServiceImpl implements IUserService {
     @Override
     public void onMove(UserMove userDto) {
         System.out.println("receiverPrivateMessage: " + userDto.getEmail());
-        simpMessagingTemplate.convertAndSendToUser(userDto.getEmail(), "/private/friend-location", userDto);
+        List<User> users = friendService.getFriends(userDto.getGoogleId());
+
+        for (User user : users) {
+            saveLastPositionToRedis(userDto.getEmail(), userDto.getLatitude(), userDto.getLongitude());
+            simpMessagingTemplate.convertAndSendToUser(user.getEmail(), "/private/friend-location", userDto);
+        }
+    }
+
+    private void saveLastPositionToRedis(String email, double latitude, double longitude) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            String userKey = "user:location:" + email;
+            Map<String, String> locationData = new HashMap<>();
+            locationData.put("latitude", String.valueOf(latitude));
+            locationData.put("longitude", String.valueOf(longitude));
+
+            // Lưu thông tin vị trí vào Redis
+            jedis.hmset(userKey, locationData);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lưu vị trí vào Redis cho người dùng: " + email);
+            e.printStackTrace();
+        }
+    }
+
+
+    @Override
+    public List<UserDto> getAllFriends() {
+        List<User> friends = friendService.getFriends(getCurrentUser().getGoogleId());
+        List<UserDto> userDtos = new ArrayList<>();
+        for (User u : friends) {
+            userDtos.add(userMapping.toDto(u));
+        }
+        return userDtos;
     }
 
     @Override

@@ -13,6 +13,7 @@ import static org.mapstruct.NullValuePropertyMappingStrategy.IGNORE;
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = IGNORE) // bỏ qua các giá trị null
 public interface UserMapper   {
 
+
     UserDto toDto(User entity);
 
     User toEntity(UserDto dto);
@@ -30,18 +31,5 @@ public interface UserMapper   {
     @Mapping(target = "friend", ignore = true)
     @Mapping(target = "relationshipRole", ignore = true)
     UserSearchResponse toSearchResponse(User entity, Long currentUserId);
-
-//    default FriendShipStatus getFriendShipStatus(User user, Long currentUserId) {
-//        // Lấy danh sách các quan hệ bạn bè liên quan đến người dùng hiện tại (gồm cả gửi và nhận)
-//        Set<FriendShip> allFriendShips = new HashSet<>();
-//        allFriendShips.addAll(user.getSentFriendShips());
-//        allFriendShips.addAll(user.getReceivedFriendShips());
-//        // Tìm quan hệ bạn bè với người dùng hiện tại
-//        return allFriendShips.stream()
-//                .filter(f -> f.getAuthor().getId().equals(currentUserId) && f.getTarget().getId().equals(user.getId()))
-//                .map(FriendShip::getStatus)
-//                .findFirst()
-//                .orElse(FriendShipStatus.NONE); // NONE là giá trị mặc định nếu không có quan hệ
-//    }
 
 }

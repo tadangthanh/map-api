@@ -50,4 +50,14 @@ public class UserRest {
         return new ResponseData<>(HttpStatus.OK.value(), "Friends found successfully", this.userService.getFriends(page, size));
     }
 
+    @GetMapping("/friends/all")
+    public ResponseData<?> getAllFriends() {
+        return new ResponseData<>(HttpStatus.OK.value(), "Friends found successfully", this.userService.getAllFriends());
+    }
+
+    @PostMapping("/test")
+    public ResponseData<?> test() {
+        System.out.println("Test successfully");
+        return new ResponseData<>(HttpStatus.OK.value(), "Test successfully", null);
+    }
 }
