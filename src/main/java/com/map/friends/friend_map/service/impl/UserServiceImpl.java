@@ -1,5 +1,6 @@
 package com.map.friends.friend_map.service.impl;
 
+import com.map.friends.friend_map.dto.NotificationDto;
 import com.map.friends.friend_map.dto.UserDto;
 import com.map.friends.friend_map.dto.request.FriendRequest;
 import com.map.friends.friend_map.dto.request.UserMove;
@@ -7,15 +8,13 @@ import com.map.friends.friend_map.dto.request.UserRequestDto;
 import com.map.friends.friend_map.dto.response.PageResponse;
 import com.map.friends.friend_map.dto.response.UserResponse;
 import com.map.friends.friend_map.dto.response.UserSearchResponse;
-import com.map.friends.friend_map.entity.FriendShip;
-import com.map.friends.friend_map.entity.Role;
-import com.map.friends.friend_map.entity.User;
-import com.map.friends.friend_map.entity.UserHasFriend;
+import com.map.friends.friend_map.entity.*;
 import com.map.friends.friend_map.exception.ResourceNotFoundException;
-import com.map.friends.friend_map.repository.FriendShipRepository;
-import com.map.friends.friend_map.repository.RoleRepository;
-import com.map.friends.friend_map.repository.UserHasFriendRepository;
-import com.map.friends.friend_map.repository.UserRepository;
+import com.map.friends.friend_map.repository.FriendShipRepo;
+import com.map.friends.friend_map.repository.RoleRepo;
+import com.map.friends.friend_map.repository.UserHasFriendRepo;
+import com.map.friends.friend_map.repository.UserRepo;
+import com.map.friends.friend_map.service.INotificationService;
 import com.map.friends.friend_map.service.IUserMapping;
 import com.map.friends.friend_map.service.IUserService;
 import jakarta.transaction.Transactional;
@@ -32,6 +31,8 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 
@@ -40,13 +41,14 @@ import java.util.*;
 @Transactional
 public class UserServiceImpl implements IUserService {
     private final IUserMapping userMapping;
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
+    private final UserRepo userRepository;
+    private final RoleRepo roleRepository;
     private final JedisPool jedisPool;
-    private final UserHasFriendRepository userHasFriendRepository;
-    private final FriendShipRepository friendShipRepository;
+    private final UserHasFriendRepo userHasFriendRepository;
+    private final FriendShipRepo friendShipRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final FriendService friendService;
+    private final INotificationService notificationService;
 
     @Override
     public UserResponse save(UserRequestDto userDto) {
@@ -94,28 +96,41 @@ public class UserServiceImpl implements IUserService {
     // gui loi moi ket ban
     @Override
     public UserSearchResponse requestAddFriend(FriendRequest friendRequest) {
-        User user = getCurrentUser();
+        User currentUser = getCurrentUser();
         User friend = userRepository.findByEmail(friendRequest.getEmail().trim()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         // kiem tra xem da la ban chua
-        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(user.getId(), friend.getId());
+        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(currentUser.getId(), friend.getId());
         if (isFriend) {
-            return userMapping.toSearchResponse(friend, user.getId());
+            return userMapping.toSearchResponse(friend, currentUser.getId());
         }
         // kiem tra xem da gui loi moi cho nguoi nay hay chua, neu roi thi khong gui nua
-        FriendShip friendShip = friendShipRepository.findFriendShipBetweenUsers(user.getId(), friend.getId()).orElse(null);
+        FriendShip friendShip = friendShipRepository.findFriendShipBetweenUsers(currentUser.getId(), friend.getId()).orElse(null);
         if (friendShip != null) {
-            return userMapping.toSearchResponse(friend, user.getId());
+            return userMapping.toSearchResponse(friend, currentUser.getId());
         }
 
         // neu chua thi gui loi moi ket ban
         friendShip = new FriendShip();
-        friendShip.setAuthor(user);
+        friendShip.setAuthor(currentUser);
         friendShip.setTarget(friend);
         // author la nguoi gui va se co trang thai la pending
         friendShipRepository.saveAndFlush(friendShip);
-        return userMapping.toSearchResponse(friend, user.getId());
+        // thong bao cho nguoi nhan
+        sendNotificationToUser(currentUser.getGoogleId(), friend.getGoogleId(), null, "Yêu cầu kết bạn", currentUser.getName() + " đã gửi lời mời kết bạn", NotificationType.FRIEND_REQUEST);
+        return userMapping.toSearchResponse(friend, currentUser.getId());
         // them logic gui thong bao cho nguoi dung
+    }
 
+    private void sendNotificationToUser(String senderGoogleId, String recipientGoogleId, Long groupId, String title, String message, NotificationType type) {
+        NotificationDto notificationMessage = new NotificationDto();
+        notificationMessage.setRecipientGoogleId(recipientGoogleId);
+        notificationMessage.setSenderGoogleId(senderGoogleId);
+        notificationMessage.setGroupId(groupId);
+        notificationMessage.setTitle(title);
+        notificationMessage.setType(type);
+        notificationMessage.setMessage(message);
+        notificationMessage.setExpirationDate(LocalDateTime.now().plusDays(7));
+        notificationService.createNotification(notificationMessage);
     }
 
     //thu hoi yeu cau ket ban
@@ -134,6 +149,8 @@ public class UserServiceImpl implements IUserService {
         if (friendShip != null) {
             // xoa loi moi ket ban
             friendShipRepository.delete(friendShip);
+            // xoa thong bao ve loi moi ket ban do
+            notificationService.deleteBySenderRecipientAndType(user.getId(), friend.getId(), NotificationType.FRIEND_REQUEST);
             return userMapping.toSearchResponse(friend, user.getId());
         }
         return userMapping.toSearchResponse(friend, user.getId());
@@ -159,6 +176,8 @@ public class UserServiceImpl implements IUserService {
         userHasFriend.setUserA(currentUser);
         userHasFriend.setUserB(friend);
         userHasFriendRepository.saveAndFlush(userHasFriend);
+        notificationService.deleteBySenderRecipientAndType(friend.getId(), currentUser.getId(), NotificationType.FRIEND_REQUEST);
+        sendNotificationToUser(currentUser.getGoogleId(), friend.getGoogleId(), null, "Kết bạn thành công", currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.FRIEND_REQUEST);
         return userMapping.toSearchResponse(friend, currentUser.getId());
     }
 
@@ -177,7 +196,20 @@ public class UserServiceImpl implements IUserService {
             return userMapping.toSearchResponse(friend, currentUser.getId());
         }
         friendShipRepository.delete(friendShip);
+        notificationService.deleteBySenderRecipientAndType(friend.getId(), currentUser.getId(), NotificationType.FRIEND_REQUEST);
         return userMapping.toSearchResponse(friend, currentUser.getId());
+    }
+
+    @Override
+    public void unFriend(FriendRequest friendRequest) {
+        User currentUser = getCurrentUser();
+        User friend = userRepository.findByEmail(friendRequest.getEmail().trim()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        boolean isFriend = userHasFriendRepository.isFriendBetweenUserAAndUserB(currentUser.getId(), friend.getId());
+        // neu la ban thi moi xoa
+        if (isFriend) {
+            UserHasFriend userHasFriend = userHasFriendRepository.findFriendShipBetweenUsers(currentUser.getId(), friend.getId()).orElseThrow(() -> new ResourceNotFoundException("2 users are not friends"));
+            userHasFriendRepository.delete(userHasFriend);
+        }
     }
 
     @Override
@@ -235,12 +267,12 @@ public class UserServiceImpl implements IUserService {
     public void onMove(UserMove userDto) {
         System.out.println("receiverPrivateMessage: " + userDto.getEmail());
         List<User> users = friendService.getFriends(userDto.getGoogleId());
-
+        saveLastPositionToRedis(userDto.getEmail(), userDto.getLatitude(), userDto.getLongitude());
         for (User user : users) {
-            saveLastPositionToRedis(userDto.getEmail(), userDto.getLatitude(), userDto.getLongitude());
             simpMessagingTemplate.convertAndSendToUser(user.getEmail(), "/private/friend-location", userDto);
         }
     }
+
 
     private void saveLastPositionToRedis(String email, double latitude, double longitude) {
         try (Jedis jedis = jedisPool.getResource()) {
@@ -266,6 +298,25 @@ public class UserServiceImpl implements IUserService {
             userDtos.add(userMapping.toDto(u));
         }
         return userDtos;
+    }
+
+    private void sendLastLocationToFriendsByUser(User user) {
+        List<User> friends = friendService.getFriends(user.getGoogleId());
+        saveLastPositionToRedis(user.getEmail(), user.getLatitude(), user.getLongitude());
+        UserDto userDto = userMapping.toDto(user);
+        for (User u : friends) {
+            simpMessagingTemplate.convertAndSendToUser(u.getEmail(), "/private/friend-location", userDto);
+        }
+    }
+
+    @Override
+    public void updateLocationOffline(UserDto userDto) {
+        User user = userRepository.findByGoogleId(userDto.getGoogleId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setLatitude(userDto.getLatitude());
+        user.setLongitude(userDto.getLongitude());
+        user.setLastTimeOnline(LocalTime.now());
+        sendLastLocationToFriendsByUser(user);
+        userRepository.save(user);
     }
 
     @Override

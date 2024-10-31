@@ -44,7 +44,11 @@
 			<artifactId>jedis</artifactId>
 			<version>5.2.0</version>
 		</dependency>
-
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>9.4.1</version>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.google.api-client/google-api-client -->
 <!--		<dependency>-->
 <!--			<groupId>com.google.api-client</groupId>-->

@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
     @PostMapping("/google")
-    public ResponseData<TokenResponse> loginWithGoogle(@RequestHeader("X-ID-TOKEN") String idToken) {
-        TokenResponse tokenResponse = authenticationService.authenticateWithGoogle(idToken);
+    public ResponseData<TokenResponse> loginWithGoogle(@RequestHeader("X-ID-TOKEN") String idToken,@RequestHeader("FCM-TOKEN") String fcmToken) {
+        TokenResponse tokenResponse = authenticationService.authenticateWithGoogle(idToken,fcmToken);
         return new ResponseData<>(HttpStatus.OK.value(), "Google login success", tokenResponse);
     }
 

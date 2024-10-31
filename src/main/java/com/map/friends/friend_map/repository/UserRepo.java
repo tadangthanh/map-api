@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User,Long> {
+public interface UserRepo extends JpaRepository<User,Long> {
     boolean existsUserByEmail(String email);
     boolean existsUserByGoogleId(String googleId);
     @Query("select u from User u where u.googleId = ?1")

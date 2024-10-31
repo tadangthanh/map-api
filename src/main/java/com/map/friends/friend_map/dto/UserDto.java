@@ -1,6 +1,6 @@
 package com.map.friends.friend_map.dto;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.map.friends.friend_map.validator.Create;
 import jakarta.validation.constraints.NotBlank;
@@ -9,6 +9,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -33,5 +35,6 @@ public class UserDto extends BaseDto<Long> {
     private Double speed;
     private Double distance;
     private String avatarUrl;
-
+    @JsonFormat(pattern = "HH:mm:ss")
+    private LocalTime lastTimeOnline;
 }

@@ -11,8 +11,8 @@ import com.map.friends.friend_map.entity.Role;
 import com.map.friends.friend_map.entity.User;
 import com.map.friends.friend_map.exception.ResourceNotFoundException;
 import com.map.friends.friend_map.exception.UnAuthorizeException;
-import com.map.friends.friend_map.repository.RoleRepository;
-import com.map.friends.friend_map.repository.UserRepository;
+import com.map.friends.friend_map.repository.RoleRepo;
+import com.map.friends.friend_map.repository.UserRepo;
 import com.map.friends.friend_map.service.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,8 +30,8 @@ public class AuthenticationService {
     private static final JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
     private final JwtService jwtService;
     private final IUserService userService;
-    private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
+    private final RoleRepo roleRepository;
+    private final UserRepo userRepository;
     private final AuthenticationManager authenticationManager;
 
     public TokenResponse authenticate(SignInRequest signInRequest) {
@@ -46,7 +46,7 @@ public class AuthenticationService {
                 .build();
     }
 
-    public TokenResponse authenticateWithGoogle(String idTokenString) {
+    public TokenResponse authenticateWithGoogle(String idTokenString, String fcmToken) {
         try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(), GsonFactory.getDefaultInstance())
@@ -56,7 +56,6 @@ public class AuthenticationService {
             if (idToken != null) {
                 GoogleIdToken.Payload payload = idToken.getPayload();
                 String email = payload.getEmail();
-
                 // Tìm user trong cơ sở dữ liệu
                 User user = userRepository.findByEmail(email)
                         .orElseGet(() -> {
@@ -69,11 +68,14 @@ public class AuthenticationService {
                             newUser.setGoogleId(payload.getSubject());
                             newUser.setLocationSharing(true);
                             newUser.setBatteryLevel(100);
+                            newUser.setFcmToken(fcmToken);
                             userRepository.save(newUser);
                             newUser.setRole(roleUser);
                             userRepository.save(newUser);
                             return newUser;
                         });
+                user.setFcmToken(fcmToken);
+                userRepository.saveAndFlush(user);
                 // Tạo access token
                 String accessToken = jwtService.generateToken(user);
                 // Tạo refresh token (ví dụ: sử dụng UUID, có thể thay bằng cách tạo khác phù hợp)
@@ -82,6 +84,7 @@ public class AuthenticationService {
                         .accessToken(accessToken)
                         .refreshToken(refreshToken)
                         .userId(user.getId())
+                        .fcmToken(fcmToken)
                         .build();
             } else {
                 throw new ResourceNotFoundException("Invalid token");

@@ -2,11 +2,10 @@ package com.map.friends.friend_map.service.impl;
 
 import com.map.friends.friend_map.entity.User;
 import com.map.friends.friend_map.entity.UserHasFriend;
-import com.map.friends.friend_map.repository.UserHasFriendRepository;
-import com.map.friends.friend_map.repository.UserRepository;
+import com.map.friends.friend_map.repository.UserHasFriendRepo;
+import com.map.friends.friend_map.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -17,8 +16,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class FriendService {
-    private final UserHasFriendRepository userHasFriendRepository;
-    private final UserRepository userRepository;
+    private final UserHasFriendRepo userHasFriendRepository;
+    private final UserRepo userRepository;
 
 
     @Cacheable(value = "friends", key = "#googleId")

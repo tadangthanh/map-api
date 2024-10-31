@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface FriendShipRepository extends JpaRepository<FriendShip, Long> {
+public interface FriendShipRepo extends JpaRepository<FriendShip, Long> {
     @Query("select f from FriendShip f where f.target.id = ?1")
     Page<FriendShip> findByTarget(Long targetId,Pageable pageable);
 

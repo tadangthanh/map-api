@@ -1,7 +1,7 @@
 package com.map.friends.friend_map.service.impl;
 
 import com.map.friends.friend_map.entity.Role;
-import com.map.friends.friend_map.repository.RoleRepository;
+import com.map.friends.friend_map.repository.RoleRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
-    private final RoleRepository roleRepository;
+    private final RoleRepo roleRepository;
 
     @Override
     public void run(String... args) {

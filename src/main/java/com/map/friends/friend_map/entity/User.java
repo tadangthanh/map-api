@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +31,8 @@ public class User extends BaseEntity<Long> implements UserDetails {
     private Double longitude;
     private double speed;
     private double distance;
+    private LocalTime lastTimeOnline;
+    private String fcmToken;
     @OneToMany(mappedBy = "user")
     private Set<UserHasGroup> groups = new HashSet<>();
     @ManyToOne

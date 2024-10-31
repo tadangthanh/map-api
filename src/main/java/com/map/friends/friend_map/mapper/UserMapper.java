@@ -14,6 +14,7 @@ import static org.mapstruct.NullValuePropertyMappingStrategy.IGNORE;
 public interface UserMapper   {
 
 
+    @Mapping(target = "lastTimeOnline",source = "lastTimeOnline",dateFormat = "HH:mm:ss")
     UserDto toDto(User entity);
 
     User toEntity(UserDto dto);

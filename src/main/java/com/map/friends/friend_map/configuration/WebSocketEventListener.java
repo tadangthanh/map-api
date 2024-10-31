@@ -2,8 +2,7 @@ package com.map.friends.friend_map.configuration;
 
 import com.map.friends.friend_map.entity.User;
 import com.map.friends.friend_map.exception.ResourceNotFoundException;
-import com.map.friends.friend_map.repository.UserRepository;
-import com.map.friends.friend_map.service.IUserService;
+import com.map.friends.friend_map.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -12,6 +11,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -19,7 +19,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class WebSocketEventListener {
     private final JedisPool jedisPool;
-    private final UserRepository userRepository;
+    private final UserRepo userRepository;
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         String email = getEmailFromEvent(event);
@@ -71,6 +71,7 @@ public class WebSocketEventListener {
 
             user.setLatitude(latitude);
             user.setLongitude(longitude);
+            user.setLastTimeOnline(LocalTime.now());
             userRepository.saveAndFlush(user);
             String cacheKey = "friends::" + user.getGoogleId();
             deleteCache(cacheKey);

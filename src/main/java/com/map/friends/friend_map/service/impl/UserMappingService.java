@@ -8,8 +8,8 @@ import com.map.friends.friend_map.entity.FriendShip;
 import com.map.friends.friend_map.entity.RelationshipRole;
 import com.map.friends.friend_map.entity.User;
 import com.map.friends.friend_map.mapper.UserMapper;
-import com.map.friends.friend_map.repository.FriendShipRepository;
-import com.map.friends.friend_map.repository.UserHasFriendRepository;
+import com.map.friends.friend_map.repository.FriendShipRepo;
+import com.map.friends.friend_map.repository.UserHasFriendRepo;
 import com.map.friends.friend_map.service.IUserMapping;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,8 +18,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserMappingService implements IUserMapping {
     private final UserMapper userMapper;
-    private final FriendShipRepository friendShipRepository;
-    private final UserHasFriendRepository userHasFriendRepository;
+    private final FriendShipRepo friendShipRepository;
+    private final UserHasFriendRepo userHasFriendRepository;
 
     @Override
     public UserDto toDto(User user) {

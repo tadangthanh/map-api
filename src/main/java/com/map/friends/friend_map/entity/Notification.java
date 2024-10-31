@@ -1,13 +1,12 @@
 package com.map.friends.friend_map.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -16,13 +15,22 @@ import lombok.Setter;
 @Entity
 @Table(name = "notification")
 public class Notification extends BaseEntity<Long>{
+    @Column(nullable = false)
+    private String title;
+    @Column(nullable = false, length = 500)
     private String message;
     private boolean isRead;
-    @OneToOne
-    @JoinColumn(name = "location_id")
-    private Location location;
+    @Enumerated(EnumType.STRING)
     private NotificationType type;
-    @OneToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @ManyToOne
+    @JoinColumn(name = "recipient_id")
+    private User recipient;
+    @ManyToOne
+    @JoinColumn(name = "sender_id")
+    private User sender;
+    @Column(name = "expiration_date")
+    private LocalDateTime expirationDate;
+    @ManyToOne
+    @JoinColumn(name = "group_id")
+    private Group group;
 }

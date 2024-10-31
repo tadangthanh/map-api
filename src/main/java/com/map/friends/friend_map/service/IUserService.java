@@ -25,6 +25,7 @@ public interface IUserService extends UserDetailsService {
     UserSearchResponse acceptAddFriend(FriendRequest friendRequest);
 
     UserSearchResponse rejectAddFriend(FriendRequest friendRequest);
+    void unFriend(FriendRequest friendRequest);
 
     PageResponse<?> getFriends(int pageNo, int pageSize);
 
@@ -32,4 +33,6 @@ public interface IUserService extends UserDetailsService {
     void onMove(UserMove userDto);
 
     List<UserDto> getAllFriends();
+
+    void updateLocationOffline(UserDto userDto);
 }
