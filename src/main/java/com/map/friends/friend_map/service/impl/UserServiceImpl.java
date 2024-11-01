@@ -3,7 +3,6 @@ package com.map.friends.friend_map.service.impl;
 import com.map.friends.friend_map.dto.NotificationDto;
 import com.map.friends.friend_map.dto.UserDto;
 import com.map.friends.friend_map.dto.request.FriendRequest;
-import com.map.friends.friend_map.dto.request.UserMove;
 import com.map.friends.friend_map.dto.request.UserRequestDto;
 import com.map.friends.friend_map.dto.response.PageResponse;
 import com.map.friends.friend_map.dto.response.UserResponse;
@@ -177,7 +176,7 @@ public class UserServiceImpl implements IUserService {
         userHasFriend.setUserB(friend);
         userHasFriendRepository.saveAndFlush(userHasFriend);
         notificationService.deleteBySenderRecipientAndType(friend.getId(), currentUser.getId(), NotificationType.FRIEND_REQUEST);
-        sendNotificationToUser(currentUser.getGoogleId(), friend.getGoogleId(), null, "Kết bạn thành công", currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.FRIEND_REQUEST);
+        sendNotificationToUser(currentUser.getGoogleId(), friend.getGoogleId(), null, currentUser.getName(), currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.ACCEPT_FRIEND);
         return userMapping.toSearchResponse(friend, currentUser.getId());
     }
 
@@ -264,7 +263,7 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public void onMove(UserMove userDto) {
+    public void onMove(UserDto userDto) {
         System.out.println("receiverPrivateMessage: " + userDto.getEmail());
         List<User> users = friendService.getFriends(userDto.getGoogleId());
         saveLastPositionToRedis(userDto.getEmail(), userDto.getLatitude(), userDto.getLongitude());
