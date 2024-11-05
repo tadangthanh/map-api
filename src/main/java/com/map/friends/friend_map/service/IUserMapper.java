@@ -7,7 +7,7 @@ import com.map.friends.friend_map.dto.response.UserSearchResponse;
 import com.map.friends.friend_map.entity.User;
 
 
-public interface IUserMapping extends IMapping<User, UserDto> {
+public interface IUserMapper extends IMapping<User, UserDto> {
     UserSearchResponse toSearchResponse(User entity, Long currentUserId);
 
     User responseToEntity(UserResponse response);

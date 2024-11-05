@@ -18,9 +18,13 @@ import java.util.Set;
 public class Group extends BaseEntity<Long>{
     private String name;
     private String description;
-    @OneToMany(mappedBy = "group")
+    @OneToMany(mappedBy = "group",cascade = CascadeType.ALL)
     private Set<UserHasGroup> users= new HashSet<>();
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "location_id")
     private Location markedLocation;
+
+    public void addMember(UserHasGroup userHasGroup){
+        users.add(userHasGroup);
+    }
 }

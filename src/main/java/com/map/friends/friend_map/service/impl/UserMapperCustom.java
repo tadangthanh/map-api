@@ -10,13 +10,13 @@ import com.map.friends.friend_map.entity.User;
 import com.map.friends.friend_map.mapper.UserMapper;
 import com.map.friends.friend_map.repository.FriendShipRepo;
 import com.map.friends.friend_map.repository.UserHasFriendRepo;
-import com.map.friends.friend_map.service.IUserMapping;
+import com.map.friends.friend_map.service.IUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class UserMappingService implements IUserMapping {
+public class UserMapperCustom implements IUserMapper {
     private final UserMapper userMapper;
     private final FriendShipRepo friendShipRepository;
     private final UserHasFriendRepo userHasFriendRepository;

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -49,7 +50,7 @@ public class GlobalHandleException extends ResponseEntityExceptionHandler{
         return new ResponseEntity<>(errorObjectDetails, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler({UnAuthorizeException.class})
+    @ExceptionHandler({UnAuthorizeException.class, AccessDeniedException.class})
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public  ResponseEntity<ErrorResponse> handleUnAuthorizeException (Exception ex, WebRequest request)  {
         ErrorResponse errorResponse = new ErrorResponse();

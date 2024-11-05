@@ -14,7 +14,7 @@ import com.map.friends.friend_map.repository.RoleRepo;
 import com.map.friends.friend_map.repository.UserHasFriendRepo;
 import com.map.friends.friend_map.repository.UserRepo;
 import com.map.friends.friend_map.service.INotificationService;
-import com.map.friends.friend_map.service.IUserMapping;
+import com.map.friends.friend_map.service.IUserMapper;
 import com.map.friends.friend_map.service.IUserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Transactional
 public class UserServiceImpl implements IUserService {
-    private final IUserMapping userMapping;
+    private final IUserMapper userMapping;
     private final UserRepo userRepository;
     private final RoleRepo roleRepository;
     private final JedisPool jedisPool;
@@ -115,22 +115,11 @@ public class UserServiceImpl implements IUserService {
         // author la nguoi gui va se co trang thai la pending
         friendShipRepository.saveAndFlush(friendShip);
         // thong bao cho nguoi nhan
-        sendNotificationToUser(currentUser.getGoogleId(), friend.getGoogleId(), null, "Yêu cầu kết bạn", currentUser.getName() + " đã gửi lời mời kết bạn", NotificationType.FRIEND_REQUEST);
+        notificationService.createNotification(currentUser.getGoogleId(), friend.getGoogleId(), null, "Yêu cầu kết bạn", currentUser.getName() + " đã gửi lời mời kết bạn", NotificationType.FRIEND_REQUEST);
         return userMapping.toSearchResponse(friend, currentUser.getId());
         // them logic gui thong bao cho nguoi dung
     }
 
-    private void sendNotificationToUser(String senderGoogleId, String recipientGoogleId, Long groupId, String title, String message, NotificationType type) {
-        NotificationDto notificationMessage = new NotificationDto();
-        notificationMessage.setRecipientGoogleId(recipientGoogleId);
-        notificationMessage.setSenderGoogleId(senderGoogleId);
-        notificationMessage.setGroupId(groupId);
-        notificationMessage.setTitle(title);
-        notificationMessage.setType(type);
-        notificationMessage.setMessage(message);
-        notificationMessage.setExpirationDate(LocalDateTime.now().plusDays(7));
-        notificationService.createNotification(notificationMessage);
-    }
 
     //thu hoi yeu cau ket ban
     @Override
@@ -176,7 +165,9 @@ public class UserServiceImpl implements IUserService {
         userHasFriend.setUserB(friend);
         userHasFriendRepository.saveAndFlush(userHasFriend);
         notificationService.deleteBySenderRecipientAndType(friend.getId(), currentUser.getId(), NotificationType.FRIEND_REQUEST);
-        sendNotificationToUser(currentUser.getGoogleId(), friend.getGoogleId(), null, currentUser.getName(), currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.ACCEPT_FRIEND);
+        notificationService.createNotification(currentUser.getGoogleId(), friend.getGoogleId(), null, currentUser.getName(), currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.ACCEPT_FRIEND);
+        // xoa cache friends
+        jedisPool.getResource().del("friends:" + currentUser.getGoogleId());
         return userMapping.toSearchResponse(friend, currentUser.getId());
     }
 

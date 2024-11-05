@@ -2,10 +2,12 @@ package com.map.friends.friend_map.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.map.friends.friend_map.entity.NotificationType;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+
 
 @Getter
 @Setter

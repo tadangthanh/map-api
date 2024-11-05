@@ -1,6 +1,5 @@
 package com.map.friends.friend_map.controller;
 
-import com.map.friends.friend_map.dto.NotificationMessage;
 import com.map.friends.friend_map.dto.UserDto;
 import com.map.friends.friend_map.dto.request.FriendRequest;
 import com.map.friends.friend_map.dto.response.ResponseData;
@@ -20,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users")
 @Slf4j
-public class UserRest {
+public class UserController {
     private final IUserService userService;
     private final FirebaseMessagingService firebaseMessagingService;
     @GetMapping("/email/{email}")
