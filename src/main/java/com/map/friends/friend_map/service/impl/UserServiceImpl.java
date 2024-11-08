@@ -1,6 +1,5 @@
 package com.map.friends.friend_map.service.impl;
 
-import com.map.friends.friend_map.dto.NotificationDto;
 import com.map.friends.friend_map.dto.UserDto;
 import com.map.friends.friend_map.dto.request.FriendRequest;
 import com.map.friends.friend_map.dto.request.UserRequestDto;
@@ -30,7 +29,6 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -115,7 +113,7 @@ public class UserServiceImpl implements IUserService {
         // author la nguoi gui va se co trang thai la pending
         friendShipRepository.saveAndFlush(friendShip);
         // thong bao cho nguoi nhan
-        notificationService.createNotification(currentUser.getGoogleId(), friend.getGoogleId(), null, "Yêu cầu kết bạn", currentUser.getName() + " đã gửi lời mời kết bạn", NotificationType.FRIEND_REQUEST);
+        notificationService.createNotificationToUser(friend.getGoogleId(), "Yêu cầu kết bạn", currentUser.getName() + " đã gửi lời mời kết bạn", NotificationType.FRIEND_REQUEST);
         return userMapping.toSearchResponse(friend, currentUser.getId());
         // them logic gui thong bao cho nguoi dung
     }
@@ -165,7 +163,7 @@ public class UserServiceImpl implements IUserService {
         userHasFriend.setUserB(friend);
         userHasFriendRepository.saveAndFlush(userHasFriend);
         notificationService.deleteBySenderRecipientAndType(friend.getId(), currentUser.getId(), NotificationType.FRIEND_REQUEST);
-        notificationService.createNotification(currentUser.getGoogleId(), friend.getGoogleId(), null, currentUser.getName(), currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.ACCEPT_FRIEND);
+        notificationService.createNotificationToUser(friend.getGoogleId(), currentUser.getName(), currentUser.getName() + " đã chấp nhận lời mời kết bạn", NotificationType.ACCEPT_FRIEND);
         // xoa cache friends
         jedisPool.getResource().del("friends:" + currentUser.getGoogleId());
         return userMapping.toSearchResponse(friend, currentUser.getId());
@@ -222,13 +220,7 @@ public class UserServiceImpl implements IUserService {
             userSearchResponses.add(userMapping.toSearchResponse(u, user.getId()));
         }
         userSearchResponses.sort(Comparator.comparing(UserSearchResponse::getName));
-        return PageResponse.builder()
-                .pageNo(pageable.getPageNumber())
-                .pageSize(pageable.getPageSize())
-                .totalPage(userHasFriends.getTotalPages())
-                .totalItems(userHasFriends.getTotalElements())
-                .hasNext(userHasFriends.hasNext())
-                .items(userSearchResponses).build();
+        return PageResponse.builder().pageNo(pageable.getPageNumber()).pageSize(pageable.getPageSize()).totalPage(userHasFriends.getTotalPages()).totalItems(userHasFriends.getTotalElements()).hasNext(userHasFriends.hasNext()).items(userSearchResponses).build();
     }
 
     @Override
@@ -243,13 +235,7 @@ public class UserServiceImpl implements IUserService {
         for (User u : users) {
             userSearchResponses.add(userMapping.toSearchResponse(u, user.getId()));
         }
-        return PageResponse.builder()
-                .pageNo(pageable.getPageNumber())
-                .pageSize(pageable.getPageSize())
-                .totalPage(friendShips.getTotalPages())
-                .totalItems(friendShips.getTotalElements())
-                .hasNext(friendShips.hasNext())
-                .items(userSearchResponses).build();
+        return PageResponse.builder().pageNo(pageable.getPageNumber()).pageSize(pageable.getPageSize()).totalPage(friendShips.getTotalPages()).totalItems(friendShips.getTotalElements()).hasNext(friendShips.hasNext()).items(userSearchResponses).build();
 
     }
 

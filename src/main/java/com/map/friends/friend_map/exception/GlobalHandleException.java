@@ -61,7 +61,7 @@ public class GlobalHandleException extends ResponseEntityExceptionHandler{
         errorResponse.setPath(request.getDescription(false));
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
-    @ExceptionHandler({ConflictResourceException.class})
+    @ExceptionHandler({ConflictResourceException.class,DuplicateGroupLocationException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
     public  ResponseEntity<ErrorResponse> handleConflictException (Exception ex, WebRequest request)  {
         ErrorResponse errorResponse = new ErrorResponse();

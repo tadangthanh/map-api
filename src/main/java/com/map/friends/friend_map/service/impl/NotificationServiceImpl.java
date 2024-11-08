@@ -10,6 +10,7 @@ import com.map.friends.friend_map.exception.ResourceNotFoundException;
 import com.map.friends.friend_map.mapper.NotificationMapper;
 import com.map.friends.friend_map.repository.GroupRepo;
 import com.map.friends.friend_map.repository.NotificationRepo;
+import com.map.friends.friend_map.repository.UserHasGroupRepo;
 import com.map.friends.friend_map.repository.UserRepo;
 import com.map.friends.friend_map.service.INotificationService;
 import jakarta.transaction.Transactional;
@@ -31,36 +32,38 @@ public class NotificationServiceImpl implements INotificationService {
     private final NotificationMapper notificationMapper;
     private final FirebaseMessagingService firebaseMessagingService;
     private final NotificationRepo notificationRepo;
+    private final UserHasGroupRepo userHasGroupRepo;
     private final UserRepo userRepo;
     private final GroupRepo groupRepo;
 
 
     @Override
-    public NotificationDto createNotification(
-            String senderGoogleId,
-            String recipientGoogleId,
-            Long groupId,
-            String title,
-            String message,
-            NotificationType type) {
-
-        NotificationDto notificationDto = buildNotificationDto(senderGoogleId, recipientGoogleId, groupId, title, message, type);
+    public NotificationDto createNotificationToUser(String recipientGoogleId, String title, String message, NotificationType type) {
+        User sender = getCurrentUser();
+        NotificationDto notificationDto = buildNotificationDto(sender.getGoogleId(), recipientGoogleId, null, title, message, type);
         Notification notification = mapToEntity(notificationDto);
-
-        setNotificationSender(notification, senderGoogleId);
-        setNotificationRecipientAndGroup(notification, notificationDto);
-
+        // set sender
+        notification.setSender(sender);
+        // set recipient and group
+        setNotificationRecipient(notification, notificationDto);
         notificationRepo.save(notification);
         return notificationMapper.toDto(notification);
     }
 
-    private NotificationDto buildNotificationDto(
-            String senderGoogleId,
-            String recipientGoogleId,
-            Long groupId,
-            String title,
-            String message,
-            NotificationType type) {
+    @Override
+    public NotificationDto createNotificationToGroup(Long groupId, String title, String message, NotificationType type) {
+        User sender = getCurrentUser();
+        NotificationDto notificationDto = buildNotificationDto(sender.getGoogleId(), null, groupId, title, message, type);
+        Notification notification = mapToEntity(notificationDto);
+        // set sender
+        notification.setSender(sender);
+        // set recipient and group
+        setNotificationGroup(notification, notificationDto);
+        notificationRepo.save(notification);
+        return notificationMapper.toDto(notification);
+    }
+
+    private NotificationDto buildNotificationDto(String senderGoogleId, String recipientGoogleId, Long groupId, String title, String message, NotificationType type) {
         NotificationDto notificationDto = new NotificationDto();
         notificationDto.setSenderGoogleId(senderGoogleId);
         notificationDto.setRecipientGoogleId(recipientGoogleId);
@@ -78,36 +81,38 @@ public class NotificationServiceImpl implements INotificationService {
         return notification;
     }
 
-    private void setNotificationSender(Notification notification, String senderGoogleId) {
-        User sender = userRepo.findByGoogleId(senderGoogleId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sender notification not found"));
-        notification.setSender(sender);
+
+    private void setNotificationRecipient(Notification notification, NotificationDto notificationDto) {
+        if (notificationDto.getRecipientGoogleId() != null) {
+            setNotificationRecipient(notification, notificationDto.getRecipientGoogleId());
+        } else {
+            throw new IllegalArgumentException("Recipient  must be specified");
+        }
     }
 
-    private void setNotificationRecipientAndGroup(Notification notification, NotificationDto notificationDto) {
-        if (notificationDto.getGroupId() != null && notificationDto.getRecipientGoogleId() != null) {
-            setNotificationGroup(notification, notificationDto.getGroupId());
-            setNotificationRecipient(notification, notificationDto.getRecipientGoogleId());
-        } else if (notificationDto.getGroupId() != null) {
-            setNotificationGroup(notification, notificationDto.getGroupId());
-            notification.setRecipient(null);  // Group notification, no recipient needed
-        } else if (notificationDto.getRecipientGoogleId() != null) {
-            setNotificationRecipient(notification, notificationDto.getRecipientGoogleId());
-            notification.setGroup(null);  // Individual notification, no group needed
+    private void setNotificationGroup(Notification notification, NotificationDto notificationDto) {
+        if (notificationDto.getGroupId() != null) {
+            Group group = groupRepo.findById(notificationDto.getGroupId()).orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+            group.getUsers().forEach(userHasGroup -> {
+               if(!userHasGroup.getUser().getGoogleId().equals(notification.getSender().getGoogleId())){
+                   notification.setRecipient(userHasGroup.getUser());
+                   notificationRepo.save(notification);
+                   firebaseMessagingService.sendNotification(notificationMapper.toDto(notification), userHasGroup.getUser().getFcmToken());
+               }
+            });
+            notification.setGroup(group);
         } else {
-            throw new IllegalArgumentException("Either recipient or group must be specified");
+            throw new IllegalArgumentException("Group must be specified");
         }
     }
 
     private void setNotificationGroup(Notification notification, Long groupId) {
-        Group group = groupRepo.findById(groupId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        Group group = groupRepo.findById(groupId).orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         notification.setGroup(group);
     }
 
     private void setNotificationRecipient(Notification notification, String recipientGoogleId) {
-        User recipient = userRepo.findByGoogleId(recipientGoogleId)
-                .orElseThrow(() -> new ResourceNotFoundException("Recipient not found"));
+        User recipient = userRepo.findByGoogleId(recipientGoogleId).orElseThrow(() -> new ResourceNotFoundException("Recipient not found"));
         notification.setRecipient(recipient);
         firebaseMessagingService.sendNotification(notificationMapper.toDto(notification), recipient.getFcmToken());
     }
@@ -129,14 +134,7 @@ public class NotificationServiceImpl implements INotificationService {
         User currentUser = getCurrentUser();
         Page<Notification> pageNotification = notificationRepo.findAllByRecipientId(currentUser.getId(), pageable);
         List<NotificationDto> notificationDtoList = notificationMapper.toDtoList(pageNotification.getContent());
-        return PageResponse.builder()
-                .items(notificationDtoList)
-                .totalItems(pageNotification.getTotalElements())
-                .totalPage(pageNotification.getTotalPages())
-                .hasNext(pageNotification.hasNext())
-                .pageNo(page)
-                .pageSize(size)
-                .build();
+        return PageResponse.builder().items(notificationDtoList).totalItems(pageNotification.getTotalElements()).totalPage(pageNotification.getTotalPages()).hasNext(pageNotification.hasNext()).pageNo(page).pageSize(size).build();
     }
 
     @Override

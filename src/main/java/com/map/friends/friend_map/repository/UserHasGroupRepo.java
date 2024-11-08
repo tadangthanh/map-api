@@ -23,6 +23,6 @@ public interface UserHasGroupRepo extends JpaRepository<UserHasGroup, Long> {
     @Query("select u from UserHasGroup u where u.user.id = ?1 and u.group.id = ?2")
     Optional<UserHasGroup> findByUserIdAndGroupId(Long userId, Long groupId);
 
-
-
+    @Query("select case when count(u) > 0 then true else false end from UserHasGroup u where u.user.id = ?1 and u.group.id = ?2")
+    boolean existsByUserIdAndGroupId(Long userId, Long groupId);
 }

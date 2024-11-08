@@ -15,6 +15,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BaseDto <T> implements Serializable {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private T id;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String createdBy;

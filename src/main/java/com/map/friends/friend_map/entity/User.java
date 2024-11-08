@@ -29,8 +29,6 @@ public class User extends BaseEntity<Long> implements UserDetails {
     private String avatarUrl;
     private Double latitude;
     private Double longitude;
-    private double speed;
-    private double distance;
     private LocalTime lastTimeOnline;
     private String fcmToken;
     @OneToMany(mappedBy = "user")

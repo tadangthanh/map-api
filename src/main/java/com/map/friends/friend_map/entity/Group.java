@@ -1,6 +1,9 @@
 package com.map.friends.friend_map.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,16 +18,15 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "_group") // nhóm
-public class Group extends BaseEntity<Long>{
+public class Group extends BaseEntity<Long> {
     private String name;
     private String description;
-    @OneToMany(mappedBy = "group",cascade = CascadeType.ALL)
-    private Set<UserHasGroup> users= new HashSet<>();
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "location_id")
-    private Location markedLocation;
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
+    private Set<UserHasGroup> users = new HashSet<>();
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
+    private Set<GroupHasLocation> groupHasLocations;
 
-    public void addMember(UserHasGroup userHasGroup){
+    public void addMember(UserHasGroup userHasGroup) {
         users.add(userHasGroup);
     }
 }

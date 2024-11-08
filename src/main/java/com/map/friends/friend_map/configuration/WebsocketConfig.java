@@ -2,6 +2,7 @@ package com.map.friends.friend_map.configuration;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -13,7 +14,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
     private final UserHandshakeHandler userHandshakeHandler;
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
-
+    private final GroupSubscriptionInterceptor groupSubscriptionInterceptor;
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
 // Khi bạn sử dụng enableSimpleBroker("/topic"), nó cho phép server gửi tin nhắn đến tất cả các client đã đăng ký vào destination bắt đầu bằng /topic
@@ -30,5 +31,9 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*").addInterceptors(webSocketAuthInterceptor).setHandshakeHandler(userHandshakeHandler);
+    }
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(groupSubscriptionInterceptor);
     }
 }

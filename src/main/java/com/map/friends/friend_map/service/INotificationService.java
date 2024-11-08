@@ -5,7 +5,8 @@ import com.map.friends.friend_map.dto.response.PageResponse;
 import com.map.friends.friend_map.entity.NotificationType;
 
 public interface INotificationService {
-    NotificationDto createNotification(String senderGoogleId, String recipientGoogleId, Long groupId, String title, String message, NotificationType type);
+    NotificationDto createNotificationToUser(String recipientGoogleId,String title, String message, NotificationType type);
+    NotificationDto createNotificationToGroup(Long groupId,String title, String message, NotificationType type);
     void deleteNotificationByGroup(Long id);
     void deleteBySenderRecipientAndType(Long senderId, Long recipientId, NotificationType type);
     PageResponse<?> getNotifications(int page, int size);
