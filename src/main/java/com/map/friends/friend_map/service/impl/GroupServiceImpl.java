@@ -6,6 +6,7 @@ import com.map.friends.friend_map.dto.request.GroupRequestDto;
 import com.map.friends.friend_map.dto.response.GroupLocationResponse;
 import com.map.friends.friend_map.dto.response.GroupResponseDto;
 import com.map.friends.friend_map.entity.*;
+import com.map.friends.friend_map.exception.BadRequestException;
 import com.map.friends.friend_map.exception.DuplicateGroupLocationException;
 import com.map.friends.friend_map.exception.ResourceNotFoundException;
 import com.map.friends.friend_map.exception.UnAuthorizeException;
@@ -50,6 +51,19 @@ public class GroupServiceImpl implements IGroupService {
         }
     }
 
+    private void validateGroupJoinCount(User user) {
+        int groupJoinCount = userHasGroupRepo.countGroupsJoinedByUser(user.getId());
+        if (groupJoinCount >= MAX_GROUP_JOIN_LIMIT) {
+            throw new ResourceNotFoundException("You have reached the maximum number of groups you can join, which is " + MAX_GROUP_JOIN_LIMIT);
+        }
+    }
+
+    private void validateFriend(User currentUser, User user) {
+        if (!userHasFriendRepo.isFriendBetweenUserAAndUserB(currentUser.getId(), user.getId())) {
+            throw new UnAuthorizeException("You are not friend with user " + user.getName());
+        }
+    }
+
     @Override
     public GroupResponseDto createGroup(GroupRequestDto groupRequestDto) {
         User currentUser = getCurrentUser();
@@ -60,36 +74,42 @@ public class GroupServiceImpl implements IGroupService {
         for (Long id : groupRequestDto.getUserIds()) {
             User user = userRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("not found user with id: " + id));
             // 1 nguoi chi tham gia toi da 3 group
-            if (userHasGroupRepo.countGroupsJoinedByUser(user.getId()) >= MAX_GROUP_JOIN_LIMIT) {
-                throw new ResourceNotFoundException("User with name " + user.getName() + " has reached the maximum number of groups they can join, which is " + MAX_GROUP_JOIN_LIMIT);
-            }
-            if (!userHasFriendRepo.isFriendBetweenUserAAndUserB(currentUser.getId(), user.getId())) {
-                throw new UnAuthorizeException("You are not friend with user " + user.getName());
-            }
-            UserHasGroup userHasGroup = new UserHasGroup();
-            userHasGroup.setGroup(group);
-            userHasGroup.setUser(user);
-            userHasGroup.setStatus(UserGroupStatus.PENDING);
-            userHasGroupRepo.saveAndFlush(userHasGroup);
+            validateGroupJoinCount(user);
+            // check if user is friend with current user
+            validateFriend(currentUser, user);
             GroupRole groupRole = groupRoleRepo.findByName("VIEWER").orElseThrow(() -> new ResourceNotFoundException("Group role not found"));
-            userHasGroup.setGroupRole(groupRole);
-            group.addMember(userHasGroup);
+            UserHasGroup userHasGroup = createUserHasGroup(user, group, UserGroupStatus.PENDING, groupRole);
             // send notification
             notificationService.createNotificationToUser(user.getGoogleId(), group.getName() == null ? "Lời mời tham gia nhóm" : group.getName(), "Baạn có 1 lời mời tham gia nhóm", NotificationType.GROUP_INVITATION);
         }
         // user create group is admin and status is joined
-        UserHasGroup userHasGroup = new UserHasGroup();
-        userHasGroup.setGroup(group);
-        userHasGroup.setStatus(UserGroupStatus.JOINED);
-        userHasGroup.setUser(currentUser);
-        userHasGroupRepo.saveAndFlush(userHasGroup);
-        group.addMember(userHasGroup);
-
-        // assign group creator role to group
         GroupRole groupRole = groupRoleRepo.findByName("ADMIN").orElseThrow(() -> new ResourceNotFoundException("Group role not found"));
-        userHasGroup.setGroupRole(groupRole);
-        userHasGroupRepo.saveAndFlush(userHasGroup);
+        UserHasGroup userHasGroup = createUserHasGroup(currentUser, group, UserGroupStatus.JOINED, groupRole);
+        sendGroupsCreateToWs(group);
         return groupMapperCustom.toResponseDto(group);
+    }
+
+    private UserHasGroup createUserHasGroup(User user, Group group, UserGroupStatus status, GroupRole groupRole) {
+        UserHasGroup userHasGroup = new UserHasGroup();
+        userHasGroup.setUser(user);
+        userHasGroup.setGroup(group);
+        userHasGroup.setStatus(status);
+        userHasGroup.setGroupRole(groupRole);
+        group.addMember(userHasGroup);
+        return userHasGroupRepo.saveAndFlush(userHasGroup);
+    }
+
+    // khi nguoi dung tao thanh cong nhom thi se tra ve nhom moi bang websocket de nguoi dung lang nghe su kien cua gr do
+    private void sendGroupsCreateToWs(Group group) {
+        group.getUsers().forEach(userHasGroup -> {
+            if (userHasGroup.getStatus().equals(UserGroupStatus.JOINED)) {
+                simpMessagingTemplate.convertAndSendToUser(userHasGroup.getUser().getEmail(), "/private/group-create", groupMapperCustom.toResponseDto(group));
+            }
+        });
+    }
+
+    private void sendGroupDisbandToWs(Long groupId) {
+        simpMessagingTemplate.convertAndSend("/topic/group-disband/" + groupId, groupId);
     }
 
     @Override
@@ -105,6 +125,7 @@ public class GroupServiceImpl implements IGroupService {
         Group group = groupRepo.findById(groupId).orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         notificationService.deleteNotificationByGroup(groupId);
         groupRepo.delete(group);
+        sendGroupDisbandToWs(groupId);
     }
 
     @Override
@@ -112,6 +133,7 @@ public class GroupServiceImpl implements IGroupService {
         User currentUser = getCurrentUser();
         UserHasGroup userHasGroup = userHasGroupRepo.findByUserIdAndGroupId(currentUser.getId(), groupId).orElseThrow(() -> new ResourceNotFoundException("User has not joined this group"));
         userHasGroup.setStatus(UserGroupStatus.JOINED);
+        sendGroupsCreateToWs(userHasGroup.getGroup());
         return groupMapperCustom.toResponseDto(userHasGroup.getGroup());
     }
 
@@ -131,25 +153,18 @@ public class GroupServiceImpl implements IGroupService {
         for (Long groupId : groupLocationRequest.getGroupIds()) {
             Group group = groupRepo.findById(groupId).orElseThrow(() -> new ResourceNotFoundException("Group not found"));
             validateGroupMembership(currentUser, group);
-
             GroupHasLocation groupHasLocation = addLocationToGroup(group, groupLocationRequest.getLocation());
-
             List<Location> locations = getLocationsOfGroup(groupId);
             result.add(createGroupLocationResponse(groupId, group, locations));
-
             notifyGroupOfNewLocation(group);
         }
-
-        sendGroupLocationUpdates(groupLocationRequest.getGroupIds(), result);
+        // send group location updates to all group members
+        sendGroupLocationAdd(groupLocationRequest.getGroupIds(), result);
         return result;
     }
 
     private GroupLocationResponse createGroupLocationResponse(Long groupId, Group group, List<Location> locations) {
-        return GroupLocationResponse.builder()
-                .groupId(groupId)
-                .groupName(group.getName())
-                .locations(locationMapper.toDtoList(locations))
-                .build();
+        return GroupLocationResponse.builder().groupId(groupId).groupName(group.getName()).locations(locationMapper.toDtoList(locations)).build();
     }
 
     private void notifyGroupOfNewLocation(Group group) {
@@ -157,8 +172,9 @@ public class GroupServiceImpl implements IGroupService {
         notificationService.createNotificationToGroup(group.getId(), notificationTitle, "Có một địa điểm mới được đánh dấu", NotificationType.LOCATION_MARKED);
     }
 
-    private void sendGroupLocationUpdates(List<Long> groupIds, List<GroupLocationResponse> result) {
-        groupIds.forEach(groupId -> simpMessagingTemplate.convertAndSend("/topic/group-location/" + groupId, result));
+    // gui vi tri moi duoc them vao nhom den tat ca thanh vien cua nhom
+    private void sendGroupLocationAdd(List<Long> groupIds, List<GroupLocationResponse> result) {
+        groupIds.forEach(groupId -> simpMessagingTemplate.convertAndSend("/topic/group-location-add/" + groupId, result));
     }
 
     private List<Location> getLocationsOfGroup(Long groupId) {
@@ -204,11 +220,16 @@ public class GroupServiceImpl implements IGroupService {
         Location location = locationRepo.findById(locationId).orElseThrow(() -> new ResourceNotFoundException("Location not found"));
         GroupHasLocation groupHasLocation = groupHasLocationRepo.findByLocationId(locationId).orElseThrow(() -> new ResourceNotFoundException("Group location not found"));
         User currentUser = getCurrentUser();
-        if (!groupHasLocation.getGroup().getCreatedBy().equals(currentUser.getEmail())) {
-            throw new UnAuthorizeException("You are not authorized to delete this location");
+        if (!groupHasLocation.getCreatedBy().equals(currentUser.getEmail()) && !location.getCreatedBy().equals(currentUser.getEmail())) {
+            throw new BadRequestException("You are not authorized to delete this location");
         }
         groupHasLocationRepo.delete(groupHasLocation);
         locationRepo.delete(location);
+        sendLocationDeletedToWs(groupHasLocation.getGroup().getId(), locationId);
+    }
+
+    private void sendLocationDeletedToWs(Long groupId, Long locationId) {
+        simpMessagingTemplate.convertAndSend("/topic/group-location-deleted/" + groupId, locationId);
     }
 
 

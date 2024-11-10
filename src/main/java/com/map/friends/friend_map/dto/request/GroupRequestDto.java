@@ -1,6 +1,5 @@
 package com.map.friends.friend_map.dto.request;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -12,9 +11,9 @@ import java.util.List;
 @Getter
 @Setter
 public class GroupRequestDto implements Serializable {
-    @Max(value = 20, message = "name length must be less than 20")
+    @Size(max = 20, min = 1, message = "name length must be less than 20")
     private String name;
-    @Max(value = 100, message = "description length must be less than 100")
+    @Size(max = 255, min = 1, message = "description length must be less than 100")
     private String description;
     @NotEmpty(message = "userIds is required")
     // min is 1 and current user is added to group by default -> 2

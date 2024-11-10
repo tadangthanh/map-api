@@ -2,10 +2,7 @@ package com.map.friends.friend_map.service.impl;
 
 import com.map.friends.friend_map.dto.NotificationDto;
 import com.map.friends.friend_map.dto.response.PageResponse;
-import com.map.friends.friend_map.entity.Group;
-import com.map.friends.friend_map.entity.Notification;
-import com.map.friends.friend_map.entity.NotificationType;
-import com.map.friends.friend_map.entity.User;
+import com.map.friends.friend_map.entity.*;
 import com.map.friends.friend_map.exception.ResourceNotFoundException;
 import com.map.friends.friend_map.mapper.NotificationMapper;
 import com.map.friends.friend_map.repository.GroupRepo;
@@ -44,7 +41,7 @@ public class NotificationServiceImpl implements INotificationService {
         Notification notification = mapToEntity(notificationDto);
         // set sender
         notification.setSender(sender);
-        // set recipient and group
+        // set recipient
         setNotificationRecipient(notification, notificationDto);
         notificationRepo.save(notification);
         return notificationMapper.toDto(notification);
@@ -94,11 +91,12 @@ public class NotificationServiceImpl implements INotificationService {
         if (notificationDto.getGroupId() != null) {
             Group group = groupRepo.findById(notificationDto.getGroupId()).orElseThrow(() -> new ResourceNotFoundException("Group not found"));
             group.getUsers().forEach(userHasGroup -> {
-               if(!userHasGroup.getUser().getGoogleId().equals(notification.getSender().getGoogleId())){
-                   notification.setRecipient(userHasGroup.getUser());
-                   notificationRepo.save(notification);
-                   firebaseMessagingService.sendNotification(notificationMapper.toDto(notification), userHasGroup.getUser().getFcmToken());
-               }
+                // chi nhung nguoi tham gia nhom moi nhan duoc thong bao
+                if (!userHasGroup.getUser().getGoogleId().equals(notification.getSender().getGoogleId()) && userHasGroup.getStatus() == UserGroupStatus.JOINED) {
+                    notification.setRecipient(userHasGroup.getUser());
+                    notificationRepo.save(notification);
+                    firebaseMessagingService.sendNotification(notificationMapper.toDto(notification), userHasGroup.getUser().getFcmToken());
+                }
             });
             notification.setGroup(group);
         } else {

@@ -27,7 +27,7 @@ public class GlobalHandleException extends ResponseEntityExceptionHandler{
         errorResponse.setPath(request.getDescription(false));
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
-    @ExceptionHandler({DuplicateResourceException.class})
+    @ExceptionHandler({DuplicateResourceException.class,BadRequestException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public  ResponseEntity<ErrorResponse> handleBadRequestException (Exception ex, WebRequest request)  {
         ErrorResponse errorResponse = new ErrorResponse();
@@ -44,7 +44,7 @@ public class GlobalHandleException extends ResponseEntityExceptionHandler{
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ErrorObjectDetails errorObjectDetails = new ErrorObjectDetails();
         errorObjectDetails.setTimestamp(LocalDateTime.now());
-        errorObjectDetails.setMessage("Validation Failed");
+        errorObjectDetails.setMessage(ex.getMessage().substring(ex.getMessage().lastIndexOf("[")+1,ex.getMessage().lastIndexOf("]")-1));
         errorObjectDetails.setField(Objects.requireNonNull(ex.getBindingResult().getFieldError()).getField());
         errorObjectDetails.setDetails(ex.getBindingResult().getFieldError().getDefaultMessage());
         return new ResponseEntity<>(errorObjectDetails, HttpStatus.BAD_REQUEST);

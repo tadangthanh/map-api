@@ -22,7 +22,10 @@ public class LocationMapperCustom implements ILocationMapper {
     @Override
     public LocationDto toDto(Location location) {
         LocationDto locationDto = locationMapper.toDto(location);
-        GroupHasLocation groupHasLocation = groupHasLocationRepo.findByLocationId(location.getId()).orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+        GroupHasLocation groupHasLocation = groupHasLocationRepo.findByLocationId(location.getId()).orElse(null);
+        if (groupHasLocation == null) {
+            return locationDto;
+        }
         locationDto.setGroupName(groupHasLocation.getGroup().getName());
         locationDto.setGroupId(groupHasLocation.getGroup().getId());
         return locationDto;

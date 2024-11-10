@@ -4,6 +4,7 @@ import com.map.friends.friend_map.dto.request.GroupLocationRequest;
 import com.map.friends.friend_map.dto.request.GroupRequestDto;
 import com.map.friends.friend_map.dto.response.ResponseData;
 import com.map.friends.friend_map.service.IGroupService;
+import com.map.friends.friend_map.validator.Create;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,7 +19,7 @@ public class GroupController {
     private final IGroupService groupService;
 
     @PostMapping
-    public ResponseData<?> createGroup(@RequestBody GroupRequestDto groupRequestDto) {
+    public ResponseData<?> createGroup(@Validated @RequestBody GroupRequestDto groupRequestDto) {
         return new ResponseData<>(HttpStatus.CREATED.value(), "Create group successfully", groupService.createGroup(groupRequestDto));
     }
 

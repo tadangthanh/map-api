@@ -6,17 +6,24 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "group_has_location")
 @Getter
 @Setter
+@Entity
+@Table(name = "shared_location")
 @AllArgsConstructor
 @NoArgsConstructor
-public class GroupHasLocation extends BaseEntity<Long> {
+public class SharedLocation extends BaseEntity<Long> {
     @ManyToOne
-    @JoinColumn(name = "group_id")
-    private Group group;
-    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "location_id")
     private Location location;
+
+    @ManyToOne
+    @JoinColumn(name = "sender_id")
+    private User sender;
+
+    @ManyToOne
+    @JoinColumn(name = "receiver_id")
+    private User receiver;
+    @Column(name = "note")
+    private String note;
 }

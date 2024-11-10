@@ -15,5 +15,4 @@ public class WebsocketController {
     public void receiverPrivateMessage(@Payload UserDto userMove) {
         userService.onMove(userMove);
     }
-
 }
